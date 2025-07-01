@@ -16,78 +16,107 @@
     .result { text-align: center; font-size: 18px; margin-top: 20px; }
     .correct { background-color: #d4edda; padding: 5px; border-radius: 5px; }
     .incorrect { background-color: #f8d7da; padding: 5px; border-radius: 5px; }
+    #timer { text-align: center; font-size: 18px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
   <h1>PEAC Online Practice Test</h1>
+  <div id="timer">Time Remaining: <span id="time">15:00</span></div>
   <form id="peacTest">
-    <div class="section" id="testSection"><h2>Practice Questions</h2></div>
+    <div class="section" id="verbal"><h2>Verbal Reasoning</h2></div>
+    <div class="section" id="quantitative"><h2>Quantitative Reasoning</h2></div>
+    <div class="section" id="abstract"><h2>Abstract Reasoning</h2></div>
     <button type="submit">Submit</button>
   </form>
   <div class="result" id="result"></div>
   <script>
-    const allQuestions = [
-      { q: "Which word is most opposite in meaning to scarce?", options: ["Abundant", "Rare", "Limited", "Small"], answer: "Abundant" },
-      { q: "Which word does not belong in this group? Banana, Apple, Carrot, Mango", options: ["Banana", "Apple", "Carrot", "Mango"], answer: "Carrot" },
-      { q: "Puppy is to Dog as Kitten is to:", options: ["Cat", "Tiger", "Lion", "Baby"], answer: "Cat" },
-      { q: "12 × (5 + 3) ÷ 4 = ?", options: ["24", "36", "12", "48"], answer: "24" },
-      { q: "What is 25% of 240?", options: ["50", "60", "70", "80"], answer: "60" },
-      { q: "Which number is prime?", options: ["21", "17", "25", "33"], answer: "17" },
-      { q: "Area of rectangle (8 cm × 5 cm)?", options: ["13", "30", "40", "45"], answer: "40" },
-      { q: "Pizza: 8 slices, 3 eaten. What fraction is left?", options: ["3/8", "5/8", "1/2", "6/8"], answer: "5/8" },
-      { q: "Convert 2.75 to fraction.", options: ["11/4", "7/2", "9/4", "5/2"], answer: "11/4" },
-      { q: "Round 3.786 to 2 decimal places.", options: ["3.78", "3.79", "3.77", "3.80"], answer: "3.79" },
-      { q: "Next number in pattern: 2, 4, 8, 16, ___", options: ["24", "30", "32", "34"], answer: "32" },
-      { q: "Complete: Square → Circle → Triangle → Square → ___", options: ["Circle", "Triangle", "Square", "Hexagon"], answer: "Circle" },
-      { q: "Which shape is different?", options: ["Square", "Rectangle", "Rhombus", "Triangle"], answer: "Triangle" },
-      { q: "Continue pattern: Z, X, V, T, ___", options: ["S", "R", "Q", "P"], answer: "R" },
-      { q: "What’s common: Cube, Sphere, Pyramid?", options: ["2D shapes", "Flat faces", "3D shapes", "No edges"], answer: "3D shapes" }
-    ];
+    let totalSeconds = 15 * 60;
+    const timerDisplay = document.getElementById("time");
+    const countdown = setInterval(() => {
+      let minutes = Math.floor(totalSeconds / 60);
+      let seconds = totalSeconds % 60;
+      timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      totalSeconds--;
+      if (totalSeconds < 0) {
+        clearInterval(countdown);
+        document.getElementById("peacTest").requestSubmit();
+      }
+    }, 1000);
 
-    function loadRandomQuestions() {
-      const shuffled = allQuestions.sort(() => 0.5 - Math.random());
-      return shuffled.slice(0, 10);
+    const questionBank = { /* ... existing questions ... */ };
+
+    function getRandomSubset(arr, size) {
+      return arr.sort(() => 0.5 - Math.random()).slice(0, size);
     }
 
-    function renderQuestions(questions) {
-      const section = document.getElementById("testSection");
-      section.innerHTML = "<h2>Practice Questions</h2>";
+    function renderSection(sectionId, questions) {
+      const section = document.getElementById(sectionId);
+      section.innerHTML = "<h2>" + sectionId.charAt(0).toUpperCase() + sectionId.slice(1) + " Reasoning</h2>";
       questions.forEach((q, index) => {
         const div = document.createElement("div");
         div.classList.add("question");
         div.innerHTML = `<p>${index + 1}. ${q.q}</p>` + q.options.map(opt => `
-          <label><input type="radio" name="q${index}" value="${opt}"> ${opt}</label><br>`).join("");
+          <label><input type="radio" name="${sectionId}_${index}" value="${opt}"> ${opt}</label><br>`).join("");
         section.appendChild(div);
       });
     }
 
-    let currentQuestions = loadRandomQuestions();
-    renderQuestions(currentQuestions);
+    let current = {
+      verbal: getRandomSubset(questionBank.verbal, 15),
+      quantitative: getRandomSubset(questionBank.quantitative, 15),
+      abstract: getRandomSubset(questionBank.abstract, 15)
+    };
+
+    renderSection("verbal", current.verbal);
+    renderSection("quantitative", current.quantitative);
+    renderSection("abstract", current.abstract);
 
     document.getElementById('peacTest').addEventListener('submit', function(e) {
       e.preventDefault();
+      clearInterval(countdown);
       let score = 0;
-      currentQuestions.forEach((q, i) => {
-        const selected = document.querySelector(`input[name="q${i}"]:checked`);
-        const labels = document.querySelectorAll(`input[name="q${i}"]`);
-        labels.forEach(input => {
-          const parent = input.parentElement;
-          if (input.value === q.answer) {
-            parent.classList.add("correct");
-          } else if (selected && input.checked) {
-            parent.classList.add("incorrect");
-          }
+      const total = 45;
+
+      Object.entries(current).forEach(([sectionId, questions]) => {
+        questions.forEach((q, i) => {
+          const selected = document.querySelector(`input[name="${sectionId}_${i}"]:checked`);
+          const options = document.querySelectorAll(`input[name="${sectionId}_${i}"]`);
+          options.forEach(input => {
+            const label = input.parentElement;
+            if (input.value === q.answer) {
+              label.classList.add("correct");
+            } else if (selected && input.checked) {
+              label.classList.add("incorrect");
+            }
+          });
+          if (selected && selected.value === q.answer) score++;
         });
-        if (selected && selected.value === q.answer) score++;
       });
-      document.getElementById('result').innerHTML = `Your Score: ${score} out of 10 <br><br> Loading next set...`;
+
+      document.getElementById('result').innerHTML = `Your Score: ${score} out of ${total} <br><br> Loading next set...`;
       setTimeout(() => {
-        currentQuestions = loadRandomQuestions();
-        renderQuestions(currentQuestions);
+        totalSeconds = 15 * 60;
+        current = {
+          verbal: getRandomSubset(questionBank.verbal, 15),
+          quantitative: getRandomSubset(questionBank.quantitative, 15),
+          abstract: getRandomSubset(questionBank.abstract, 15)
+        };
+        renderSection("verbal", current.verbal);
+        renderSection("quantitative", current.quantitative);
+        renderSection("abstract", current.abstract);
         document.getElementById('result').textContent = "";
-      }, 5000);
+        countdown = setInterval(() => {
+          let minutes = Math.floor(totalSeconds / 60);
+          let seconds = totalSeconds % 60;
+          timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+          totalSeconds--;
+          if (totalSeconds < 0) {
+            clearInterval(countdown);
+            document.getElementById("peacTest").requestSubmit();
+          }
+        }, 1000);
+      }, 7000);
     });
   </script>
 </body>
 </html>
-
